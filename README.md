@@ -27,38 +27,6 @@
         - [Desplegar en una nueva red virtual](#desplegar-en-una-nueva-red-virtual)
         - [Desplegar en una red virtual existente](#desplegar-en-una-red-virtual-existente)
         - [Limpiar recursos](#limpiar-recursos)
-        - [Próximos pasos](#próximos-pasos)
-
-Azure Virtual Network proporciona redes privadas y seguras para tus recursos de Azure y locales. Al desplegar grupos de contenedores en una red virtual de Azure, tus contenedores pueden comunicarse de manera segura con otros recursos en la misma red virtual.
-
-Este artículo muestra cómo usar el comando `az container create` en Azure CLI para desplegar grupos de contenedores en una nueva red virtual o en una red virtual existente.
-
-> **Importante**  
-> - Las subredes deben delegarse antes de usar una red virtual.  
-> - Antes de desplegar grupos de contenedores en redes virtuales, se recomienda revisar primero las limitaciones. Para escenarios y limitaciones de red, consulta [Escenarios y recursos de redes virtuales para Azure Container Instances](#).
-> - El despliegue de grupos de contenedores en una red virtual está disponible de manera general para contenedores Linux y Windows en la mayoría de las regiones donde Azure Container Instances está disponible. Para más detalles, consulta [Regiones disponibles](#).
-> - Los perfiles de red se retiraron a partir de la versión de la API `2021-07-01`. Si estás usando esta versión o una más reciente, ignora los pasos y acciones relacionados con los perfiles de red.
-
-Los ejemplos de este artículo están formateados para el shell Bash. Si prefieres otro shell, como PowerShell o Command Prompt, ajusta los caracteres de continuación de línea según corresponda.
-
----
-
-## Requisitos previos
-
-### Definir variables de entorno
-
-La vía de despliegue automatizada utiliza las siguientes variables de entorno y nombres de recursos a lo largo de esta guía. Si realizas el proceso manualmente, puedes usar tus propias variables y nombres según prefieras.
-
-### Crear un grupo de recursos
-
-Necesitas un grupo de recursos para administrar todos los recursos utilizados en los siguientes ejemplos. Para crear un grupo de recursos, usa `az group create`:
-
-```bash
-export RANDOM_ID="$(openssl rand -hex 3)"
-export MY_RESOURCE_GROUP_NAME="myACIResourceGroup$RANDOM_ID"
-
-az group create --name $MY_RESOURCE_GROUP_NAME --location eastus
-
 
 ## Conceptos Base
 ### ¿Que es Azure Container Instance?
@@ -530,112 +498,118 @@ code ngroups-deployment.json
 ```
 ```json
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-      "location": {
-        "type": "string",
-        "defaultValue": "eastus"
-      },
-      "cgProfileName": {
-        "type": "string",
-        "defaultValue": "myCGProfile"
-      },
-      "nGroupsName": {
-        "type": "string",
-        "defaultValue": "myNGroup"
-      },
-      "desiredCount": {
-        "type": "int",
-        "defaultValue": 3
-      },
-      "zonesArray": {
-        "type": "array",
-        "defaultValue": [
-          "1",
-          "2",
-          "3"
-        ],
-        "metadata": {
-          "description": "Zonas de disponibilidad para distribuir los contenedores."
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus"
+    },
+    "cgProfileName": {
+      "type": "string",
+      "defaultValue": "myCGProfile"
+    },
+    "nGroupsName": {
+      "type": "string",
+      "defaultValue": "myNGroup"
+    },
+    "desiredCount": {
+      "type": "int",
+      "defaultValue": 3
+    },
+    "zonesArray": {
+      "type": "array",
+      "defaultValue": [
+        "1",
+        "2",
+        "3"
+      ],
+      "metadata": {
+        "description": "Zonas de disponibilidad para distribuir los contenedores."
       }
-    },
-    "variables": {
-      "resourcePrefix": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/')]"
-    },
-    "resources": [
-      {
-        "apiVersion": "2024-11-01-preview",
-        "type": "Microsoft.ContainerInstance/containerGroupProfiles",
-        "name": "[parameters('cgProfileName')]",
-        "location": "[parameters('location')]",
-        "properties": {
-          "sku": "Standard",
-          "containers": [
-            {
-              "name": "aci-tutorial-app",
-              "properties": {
-                "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
-                "ports": [
-                  {
-                    "protocol": "TCP",
-                    "port": 80
-                  }
-                ],
-                "resources": {
-                  "requests": {
-                    "memoryInGB": 1.5,
-                    "cpu": 1
-                  }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/')]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2024-11-01-preview",
+      "type": "Microsoft.ContainerInstance/containerGroupProfiles",
+      "name": "[parameters('cgProfileName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": "Standard",
+        "containers": [
+          {
+            "name": "aci-tutorial-app",
+            "properties": {
+              "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
+              "ports": [
+                {
+                  "protocol": "TCP",
+                  "port": 80
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "memoryInGB": 1.5,
+                  "cpu": 1
                 }
               }
             }
-          ],
-          "restartPolicy": "OnFailure",
-          "ipAddress": {
-            "type": "Public",
-            "ports": [
-              {
-                "protocol": "TCP",
-                "port": 80
-              }
-            ]
-          },
-          "osType": "Linux"
-        }
-      },
-      {
-        "apiVersion": "2024-11-01-preview",
-        "type": "Microsoft.ContainerInstance/NGroups",
-        "name": "[parameters('nGroupsName')]",
-        "location": "[parameters('location')]",
-        "dependsOn": [
-          "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
+          }
         ],
-        "properties": {
-          "elasticProfile": {
-            "desiredCount": "[parameters('desiredCount')]",
-            "maintainDesiredCount": true
-          },
-          "containerGroupProfiles": [
+        "restartPolicy": "OnFailure",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
             {
-              "resource": {
-                "id": "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
-              }
+              "protocol": "TCP",
+              "port": 80
             }
           ]
         },
-        "zones": "[parameters('zonesArray')]"
+        "osType": "Linux"
       }
-    ],
-    "outputs": {
-      "nGroupsResourceId": {
-        "type": "string",
-        "value": "[resourceId('Microsoft.ContainerInstance/NGroups', parameters('nGroupsName'))]"
-      }
+    },
+    {
+      "apiVersion": "2024-11-01-preview",
+      "type": "Microsoft.ContainerInstance/NGroups",
+      "name": "[parameters('nGroupsName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
+      ],
+      "properties": {
+        "elasticProfile": {
+          "desiredCount": "[parameters('desiredCount')]",
+          "maintainDesiredCount": true
+        },
+        "updateProfile": { 
+          "updateMode": "Rolling",
+          "rollingUpdateProfile": { 
+            "inPlaceUpdate": true 
+          } 
+        },
+        "containerGroupProfiles": [
+          {
+            "resource": {
+              "id": "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
+            }
+          }
+        ]
+      },
+      "zones": "[parameters('zonesArray')]"
+    }
+  ],
+  "outputs": {
+    "nGroupsResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerInstance/NGroups', parameters('nGroupsName'))]"
     }
   }
+}
 ```
 ## Desplegar plantilla ARM para Ngroups
 1.	Crear o seleccionar un grupo de recursos (si no existe):
@@ -803,3 +777,126 @@ Para ver los registros del contenedor, ejecuta un comando similar especificando 
     az container logs --resource-group $RESOURCE_GROUP_NAME --name $APP_CONTAINER_NAME
 ```
 
+
+### Desplegar en una red virtual existente
+
+Para desplegar un **Container Groups** en una red virtual existente:
+1.	Crea una subred dentro de una red virtual existente, utiliza una subred existente en la que ya se haya desplegado un **Container Groups**o usa una subred existente vacía de otros recursos y configuraciones. La subred que uses para **Container Groups** solo puede contener **Container Groups**. Antes de desplegar un **Container Groups** en una subred, debes delegarla explícitamente antes de aprovisionar. Una vez delegada, la subred solo se puede utilizar para grupos de contenedores. Si intentas desplegar recursos que no sean grupos de contenedores en una subred delegada, la operación fallará.
+
+2.	Despliega un grupo de contenedores con az container create y especifica una de las siguientes opciones:
+	•	Nombre de la red virtual y nombre de la subred.
+	•	Resource ID de la red virtual y Resource ID de la subred, lo que permite usar una red virtual de un grupo de recursos diferente.
+
+### Desplegar usando un archivo YAML
+
+También puedes desplegar un **Container Groups** en una red virtual existente usando un archivo YAML.
+
+Por ejemplo, al usar un archivo YAML y poder  desplegar en una red virtual con una subred delegada, debes especificar las siguientes propiedades:
+- ipAddress: Configuración de dirección IP privada para el grupo de contenedores.
+- ports: Puertos que se abrirán (si corresponde).
+- protocol: Protocolo (TCP o UDP) para el puerto abierto.
+- subnetIds: Resource IDs de las subredes en las que se desplegará.
+- id: Resource ID de la subred.
+- name: Nombre de la subred.
+
+El siguiente YAML crea un **Container Groups** en tu red virtual existente.
+
+```yaml
+apiVersion: '2021-07-01'
+location: eastus
+name: appcontaineryaml
+properties:
+  containers:
+  - name: appcontaineryaml
+    properties:
+      image: mcr.microsoft.com/azuredocs/aci-helloworld
+      ports:
+      - port: 80
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  ipAddress:
+    type: Private
+    ports:
+    - protocol: tcp
+      port: '80'
+  osType: Linux
+  restartPolicy: Always
+  subnetIds:
+    - id: <subnet_id>
+      name: default
+tags: null
+type: Microsoft.ContainerInstance/containerGroups
+```
+### Aprovisionamiento usando Az CLI
+```bash
+#!/bin/bash
+
+# Variables de entorno
+export RESOURCE_GROUP_NAME='myAciYaml'
+export LOCATION='eastus'
+export VNET_NAME='myAciYamlVnet'
+export SUBNET_NAME='myAciYamlVnetSubnet'
+export YAML_APP_CONTAINER_NAME="appcontaineryaml"
+
+# 1. Crear el grupo de recursos
+az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
+
+# 2. Crear la VNet y la Subnet
+az network vnet create \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --name $VNET_NAME \
+  --address-prefixes 10.0.0.0/8 \
+  --subnet-name $SUBNET_NAME \
+  --subnet-prefix 10.0.0.0/16
+
+# 3. Delegar la Subnet para Azure Container Instances
+az network vnet subnet update \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --vnet-name $VNET_NAME \
+  --name $SUBNET_NAME \
+  --delegations "Microsoft.ContainerInstance/containerGroups"
+  
+# 4. Obtener el ID de la Subnet
+export SUBNET_ID=$(az network vnet subnet show \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --vnet-name $VNET_NAME \
+  --name $SUBNET_NAME \
+  --query id --output tsv)
+
+# 5. Generar el archivo YAML en memoria con sustitución de variables
+cat <<EOF > container.yaml
+apiVersion: '2023-05-01'
+location: ${LOCATION}
+name: ${YAML_APP_CONTAINER_NAME}
+properties:
+  containers:
+  - name: ${YAML_APP_CONTAINER_NAME}
+    properties:
+      image: mcr.microsoft.com/azuredocs/aci-helloworld
+      ports:
+      - port: 80
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  ipAddress:
+    type: Private
+    ports:
+    - protocol: tcp
+      port: '80'
+  osType: Linux
+  restartPolicy: Always
+  subnetIds:
+    - id: ${SUBNET_ID}
+      name: default
+tags: null
+type: Microsoft.ContainerInstance/containerGroups
+EOF
+
+# 6. Crear el Container Instance usando el archivo YAML generado
+az container create --resource-group $RESOURCE_GROUP_NAME --file container.yaml
+```

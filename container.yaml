@@ -1,0 +1,27 @@
+apiVersion: '2023-05-01'
+location: eastus
+name: appcontaineryaml
+properties:
+  containers:
+  - name: appcontaineryaml
+    properties:
+      image: mcr.microsoft.com/azuredocs/aci-helloworld
+      ports:
+      - port: 80
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  ipAddress:
+    type: Private
+    ports:
+    - protocol: tcp
+      port: '80'
+  osType: Linux
+  restartPolicy: Always
+  subnetIds:
+    - id: /subscriptions/98fc3001-5ba8-4215-acde-94ca7d64d2fa/resourceGroups/myAciYaml/providers/Microsoft.Network/virtualNetworks/myAciYamlVnet/subnets/myAciYamlVnetSubnet
+      name: default
+tags: null
+type: Microsoft.ContainerInstance/containerGroups
