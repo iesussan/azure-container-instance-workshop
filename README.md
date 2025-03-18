@@ -238,7 +238,7 @@ Nota: Si quisieramos usar un registry privado tendriamos que agregar:
 nota:
 Si deseas ver la aplicación en ejecución, navega a la dirección IP asignada en tu navegador. Por ejemplo, en la salida de este ejemplo la IP es 52.168.26.124:
 
-## Ver los registros del contenedor
+## Ver los registros del contenedor (ARM)
 
 Para ver la salida de los registros de un contenedor, utiliza el comando az container logs. El argumento --container-name especifica el contenedor del cual se extraerán los registros. En este ejemplo, se especifica el contenedor aci-tutorial-app:
 
@@ -363,7 +363,7 @@ imageRegistryCredentials:
 
     En cuestión de segundos, deberías recibir una respuesta inicial de Azure.
 
-## Ver los registros del contenedor
+## Ver los registros del contenedor (YAML)
 
 Para ver la salida de los registros de un contenedor, utiliza el comando az container logs. El argumento --container-name especifica el contenedor del cual se extraerán los registros. En este ejemplo, se especifica el contenedor aci-tutorial-app:
 
@@ -420,7 +420,7 @@ az group delete -n myResourceGroup --yes
 
 ## Arquitectura de Alto Nivel y Conceptos Clave
 
-NGroups provee capacidades avanzadas para manejar multiples capacidades sobre multiples Container Groups.
+NGroups provee funcionalidades avanzadas para manejar multiples capacidades sobre los Container Groups.
 De los elementos principales se incluyen:
 - Es capaz de manater multiples instancias
 - Permite Rolling Updates.
