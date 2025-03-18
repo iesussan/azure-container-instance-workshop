@@ -411,6 +411,11 @@ Para eliminar el laboratorio ejecutar:
 az container delete --resource-group myResourceGroup --name myContainerGroup --yes
 ```
 
+Borrado de Resource Group
+```bash
+az group delete -n myResourceGroup --yes
+```
+
 ## NGroups (Preview)
 
 ## Arquitectura de Alto Nivel y Conceptos Clave
