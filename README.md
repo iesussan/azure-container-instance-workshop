@@ -26,7 +26,6 @@
         - [Requisitos previos](#requisitos-previos)
         - [Desplegar en una nueva red virtual](#desplegar-en-una-nueva-red-virtual)
         - [Desplegar en una red virtual existente](#desplegar-en-una-red-virtual-existente)
-        - [Limpiar recursos](#limpiar-recursos)
 
 ## Conceptos Base
 ### ¿Que es Azure Container Instance?
@@ -858,7 +857,7 @@ az network vnet subnet update \
   --vnet-name $VNET_NAME \
   --name $SUBNET_NAME \
   --delegations "Microsoft.ContainerInstance/containerGroups"
-  
+
 # 4. Obtener el ID de la Subnet
 export SUBNET_ID=$(az network vnet subnet show \
   --resource-group $RESOURCE_GROUP_NAME \
@@ -899,4 +898,16 @@ EOF
 
 # 6. Crear el Container Instance usando el archivo YAML generado
 az container create --resource-group $RESOURCE_GROUP_NAME --file container.yaml
+```
+
+Para ver el estado del despliegue, utiliza el siguiente comando:
+
+```bash
+    az container show --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME --output table
+```
+
+Para ver los registros del contenedor, ejecuta un comando similar especificando el contenedor aci-tutorial-sidecar:
+
+```bash
+    az container logs --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME
 ```
