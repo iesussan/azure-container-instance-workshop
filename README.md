@@ -221,7 +221,7 @@ Nota: Si quisieramos usar un registry privado tendriamos que agregar:
 
 1.	Crea un grupo de recursos con el comando az group create:
     ```bash
-    az group create --name myResourceGroup --location brazilsouth
+    az group create --name myResourceGroup --location brazilsouth --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
     ```
 
 2.	Despliega la plantilla utilizando el comando az deployment group create:
@@ -350,7 +350,7 @@ imageRegistryCredentials:
     Utiliza el siguiente comando para crear un grupo de recursos:
 
     ```bash
-    az group create --name myResourceGroup --location brazilsouth
+    az group create --name myResourceGroup --location brazilsouth --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
     ```
 
 2.	Desplegar el grupo de contenedores:
@@ -619,7 +619,7 @@ code ngroups-deployment.json
 1.	Crear o seleccionar un grupo de recursos (si no existe):
 
     ```bash
-    az group create --name myResourceGroup --location brazilsouth
+    az group create --name myResourceGroup --location brazilsouth --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
     ```
 
 2.	Desplegar la plantilla que contiene containerGroupProfiles y NGroups:
@@ -717,7 +717,7 @@ export RANDOM_ID="$(openssl rand -hex 3)"
 export RESOURCE_GROUP_NAME="myACIResourceGroup$RANDOM_ID"
 export LOCATION='brazilsouth'
 
-az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
+az group create --name $RESOURCE_GROUP_NAME --location $LOCATION --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
 ```
 > Nota: Una operación exitosa debería producir una salida similar al siguiente JSON:
 ```json
@@ -846,7 +846,7 @@ export SUBNET_NAME='myAciYamlVnetSubnet'
 export YAML_APP_CONTAINER_NAME="appcontaineryaml"
 
 # 1. Crear el grupo de recursos
-az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
+az group create --name $RESOURCE_GROUP_NAME --location $LOCATION --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
 
 # 2. Crear la VNet y la Subnet
 az network vnet create \
