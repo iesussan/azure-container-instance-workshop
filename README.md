@@ -4,16 +4,61 @@
 
 - [Conceptos Base](#conceptos-base)
 - [Tipo de despliegues en Azure Container Instance](#tipo-de-despliegues-en-azure-container-instance)
-    - [Container Groups](#container-groups)
+  - [Container Groups](#container-groups)
     - [Despliegue de container Groups](#despliegue-de-container-groups)
-        - [Despliegue de Container Group usando ARM Templates](#despliegue-de-container-group-usando-arm-templates)
-            - [Configuración de plantilla](#configuración-de-plantilla)
-            - [Desplegar la plantilla ARM](#desplegar-la-plantilla-arm)
-            - [Ver los registros del contenedor (ARM)](#ver-los-registros-del-contenedor-arm)
-        - [Despliegue de Container Group usando archivos YAML](#despliegue-de-container-group-usando-archivos-yaml)
-            - [Desplegar el grupo de contenedores](#desplegar-el-grupo-de-contenedores)
-            - [Estado del despliegue](#estado-del-despliegue)
-            - [Ver los registros del contenedor (YAML)](#ver-los-registros-del-contenedor-yaml)
+      - [Despliegue de Container Group usando ARM Templates](#despliegue-de-container-group-usando-arm-templates)
+        - [Configuración de plantilla](#configuración-de-plantilla)
+        - [Desplegar la plantilla ARM](#desplegar-la-plantilla-arm)
+        - [Ver los registros del contenedor (ARM)](#ver-los-registros-del-contenedor-arm)
+      - [Despliegue de Container Group usando archivos YAML](#despliegue-de-container-group-usando-archivos-yaml)
+        - [Desplegar el grupo de contenedores](#desplegar-el-grupo-de-contenedores)
+        - [Estado del despliegue](#estado-del-despliegue)
+        - [Ver los registros del contenedor (YAML)](#ver-los-registros-del-contenedor-yaml)
+  - [NGroups (Preview)](#ngroups-preview)
+    - [Arquitectura de Alto Nivel y Conceptos Clave](#arquitectura-de-alto-nivel-y-conceptos-clave)
+
+- [Virtual network scenarios](#virtual-network-scenarios)
+    - [Escenarios](#escenarios)
+    - [Escenarios de red no admitidos](#escenarios-de-red-no-admitidos)
+    - [Otras limitaciones](#otras-limitaciones)
+    - [Recursos de red requeridos](#recursos-de-red-requeridos)
+    - [Desplegar ACI en una red virtual de Azure](#desplegar-aci-en-una-red-virtual-de-azure) 
+        - [Requisitos previos](#requisitos-previos)
+        - [Desplegar en una nueva red virtual](#desplegar-en-una-nueva-red-virtual)
+        - [Desplegar en una red virtual existente](#desplegar-en-una-red-virtual-existente)
+        - [Limpiar recursos](#limpiar-recursos)
+        - [Próximos pasos](#próximos-pasos)
+
+Azure Virtual Network proporciona redes privadas y seguras para tus recursos de Azure y locales. Al desplegar grupos de contenedores en una red virtual de Azure, tus contenedores pueden comunicarse de manera segura con otros recursos en la misma red virtual.
+
+Este artículo muestra cómo usar el comando `az container create` en Azure CLI para desplegar grupos de contenedores en una nueva red virtual o en una red virtual existente.
+
+> **Importante**  
+> - Las subredes deben delegarse antes de usar una red virtual.  
+> - Antes de desplegar grupos de contenedores en redes virtuales, se recomienda revisar primero las limitaciones. Para escenarios y limitaciones de red, consulta [Escenarios y recursos de redes virtuales para Azure Container Instances](#).
+> - El despliegue de grupos de contenedores en una red virtual está disponible de manera general para contenedores Linux y Windows en la mayoría de las regiones donde Azure Container Instances está disponible. Para más detalles, consulta [Regiones disponibles](#).
+> - Los perfiles de red se retiraron a partir de la versión de la API `2021-07-01`. Si estás usando esta versión o una más reciente, ignora los pasos y acciones relacionados con los perfiles de red.
+
+Los ejemplos de este artículo están formateados para el shell Bash. Si prefieres otro shell, como PowerShell o Command Prompt, ajusta los caracteres de continuación de línea según corresponda.
+
+---
+
+## Requisitos previos
+
+### Definir variables de entorno
+
+La vía de despliegue automatizada utiliza las siguientes variables de entorno y nombres de recursos a lo largo de esta guía. Si realizas el proceso manualmente, puedes usar tus propias variables y nombres según prefieras.
+
+### Crear un grupo de recursos
+
+Necesitas un grupo de recursos para administrar todos los recursos utilizados en los siguientes ejemplos. Para crear un grupo de recursos, usa `az group create`:
+
+```bash
+export RANDOM_ID="$(openssl rand -hex 3)"
+export MY_RESOURCE_GROUP_NAME="myACIResourceGroup$RANDOM_ID"
+
+az group create --name $MY_RESOURCE_GROUP_NAME --location eastus
+
 
 ## Conceptos Base
 ### ¿Que es Azure Container Instance?
@@ -401,7 +446,7 @@ az container delete --resource-group myResourceGroup --name myContainerGroup --y
 
 ## NGroups (Preview)
 
-### Arquitectura de Alto Nivel y Conceptos Clave
+## Arquitectura de Alto Nivel y Conceptos Clave
 
 NGroups provee capacidades avanzadas para manejar multiples capacidades sobre multiples Container Groups.
 De los elementos principales se incluyen:
@@ -413,7 +458,7 @@ De los elementos principales se incluyen:
 - Soporta la implementacion de Balanceadores.
 - Soporta Zone rebalancing (Zone Any)
 
-## Aquitectura de alto nivel
+## Grafico de Aquitectura de alto nivel
 
 ![Container Group Example](./images/ngroups-overview.png)
 
@@ -485,112 +530,112 @@ code ngroups-deployment.json
 ```
 ```json
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "location": {
-      "type": "string",
-      "defaultValue": "eastus"
-    },
-    "cgProfileName": {
-      "type": "string",
-      "defaultValue": "myCGProfile"
-    },
-    "nGroupsName": {
-      "type": "string",
-      "defaultValue": "myNGroup"
-    },
-    "desiredCount": {
-      "type": "int",
-      "defaultValue": 3
-    },
-    "zonesArray": {
-      "type": "array",
-      "defaultValue": [
-        "1,2,3"
-      ],
-      "metadata": {
-        "description": "Zonas de disponibilidad para distribuir los contenedores."
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "type": "string",
+        "defaultValue": "eastus"
+      },
+      "cgProfileName": {
+        "type": "string",
+        "defaultValue": "myCGProfile"
+      },
+      "nGroupsName": {
+        "type": "string",
+        "defaultValue": "myNGroup"
+      },
+      "desiredCount": {
+        "type": "int",
+        "defaultValue": 3
+      },
+      "zonesArray": {
+        "type": "array",
+        "defaultValue": [
+          "1",
+          "2",
+          "3"
+        ],
+        "metadata": {
+          "description": "Zonas de disponibilidad para distribuir los contenedores."
+        }
       }
-    }
-  },
-  "variables": {
-    "resourcePrefix": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/')]"
-  },
-  "resources": [
-    {
-      "apiVersion": "2024-11-01-preview",
-      "type": "Microsoft.ContainerInstance/containerGroupProfiles",
-      "name": "[parameters('cgProfileName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "sku": "Standard",
-        "containers": [
-          {
-            "name": "aci-tutorial-app",
-            "properties": {
-              "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
-              "ports": [
-                {
-                  "protocol": "TCP",
-                  "port": 80
-                }
-              ],
-              "resources": {
-                "requests": {
-                  "memoryInGB": 1.5,
-                  "cpu": 1
+    },
+    "variables": {
+      "resourcePrefix": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/')]"
+    },
+    "resources": [
+      {
+        "apiVersion": "2024-11-01-preview",
+        "type": "Microsoft.ContainerInstance/containerGroupProfiles",
+        "name": "[parameters('cgProfileName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "sku": "Standard",
+          "containers": [
+            {
+              "name": "aci-tutorial-app",
+              "properties": {
+                "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
+                "ports": [
+                  {
+                    "protocol": "TCP",
+                    "port": 80
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "memoryInGB": 1.5,
+                    "cpu": 1
+                  }
                 }
               }
             }
-          }
+          ],
+          "restartPolicy": "OnFailure",
+          "ipAddress": {
+            "type": "Public",
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 80
+              }
+            ]
+          },
+          "osType": "Linux"
+        }
+      },
+      {
+        "apiVersion": "2024-11-01-preview",
+        "type": "Microsoft.ContainerInstance/NGroups",
+        "name": "[parameters('nGroupsName')]",
+        "location": "[parameters('location')]",
+        "dependsOn": [
+          "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
         ],
-        "restartPolicy": "OnFailure",
-        "ipAddress": {
-          "type": "Public",
-          "ports": [
+        "properties": {
+          "elasticProfile": {
+            "desiredCount": "[parameters('desiredCount')]",
+            "maintainDesiredCount": true
+          },
+          "containerGroupProfiles": [
             {
-              "protocol": "TCP",
-              "port": 80
+              "resource": {
+                "id": "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
+              }
             }
           ]
         },
-        "osType": "Linux"
+        "zones": "[parameters('zonesArray')]"
       }
-    },
-    {
-      "apiVersion": "2024-11-01-preview",
-      "type": "Microsoft.ContainerInstance/NGroups",
-      "name": "[parameters('nGroupsName')]",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
-      ],
-      "properties": {
-        "elasticProfile": {
-          "desiredCount": "[parameters('desiredCount')]",
-          "maintainDesiredCount": true
-        },
-        "containerGroupProfiles": [
-          {
-            "resource": {
-              "id": "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
-            }
-          }
-        ]
-      },
-      "zones": "[parameters('zonesArray')]"
-    }
-  ],
-  "outputs": {
-    "nGroupsResourceId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.ContainerInstance/NGroups', parameters('nGroupsName'))]"
+    ],
+    "outputs": {
+      "nGroupsResourceId": {
+        "type": "string",
+        "value": "[resourceId('Microsoft.ContainerInstance/NGroups', parameters('nGroupsName'))]"
+      }
     }
   }
-}
-}
-
 ```
 ## Desplegar plantilla ARM para Ngroups
 1.	Crear o seleccionar un grupo de recursos (si no existe):
@@ -627,5 +672,134 @@ Para cambiar el número de instancias en tu NGroups, puedes actualizar el desire
     --resource-group myResourceGroup \
     --template-file ngroups-deployment.json \
     --parameters location=eastus cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=5
+```
+
+## Virtual network scenarios
+
+### Escenarios
+
+Los **Container Groups** desplegados en una red virtual de Azure habilitan escenarios como:
+
+- Comunicación directa entre **Container Groups** en la misma subred.  
+- PErmitir desde instancias de **Container Groups** a recursos de azure que esten en una red virtual diferente.  
+- Habilitar la comunicación de **Container Groups**  a través de una VPN o ExpressRoute.  
+- Halitiar la inspeccion de la red para identificar el tráfico saliente que se origina el **Container Groups** .  
+- Resolver nombres mediante DNS internos de azure para garanrizar la comunicación con otros recuros asociados a una red virtual, como máquinas virtuales.  
+- Utilizar reglas de NSG para controlar el acceso de los contenedores a subredes u otros recursos de red.
+
+---
+
+### Escenarios de red no admitidos
+
+- **Azure Load Balancer**: No se admite colocar un Azure Load Balancer delante de instancias de contenedor en un grupo de contenedores conectado a la red.  
+- **Peering de red virtual global**: No se admite el peering global (conexión de redes virtuales en diferentes regiones de Azure).  
+- **Dirección IP pública o etiqueta DNS**: Los **Container Groups**  desplegados en una red virtual actualmente no admiten exponer contenedores directamente a internet con una dirección IP pública o un nombre de dominio completamente calificado.  
+- **Managed Identity con red virtual en regiones de Azure Government**: No se admite Managed Identity con capacidades de red virtual en regiones de Azure Government.
+
+---
+
+### Otras limitaciones
+
+- La subred que utilices para los grupos de contenedores solo puede contener **Container Groups**. Es decir se debe Eliminar todos los recursos existentes de una subred antes de desplegar grupos de contenedores en ella, o crea una nueva subred.  
+- Para desplegar **Container Groups**  en una subred, tanto la subred como el grupo de contenedores deben estar en la misma suscripción de Azure.  
+- Los despliegues en una red virtual suelen ser más lentos que el despliegue estándar de instancias de contenedor.  
+- No se admiten conexiones salientes al puerto 25 ni al 19390. El puerto 19390 debe abrirse en tu firewall para conectar con ACI desde el portal de Azure cuando los grupos de contenedores están desplegados en redes virtuales.  
+- Para las conexiones entrantes, el firewall también debe permitir todas las direcciones IP dentro de la red virtual.  
+- Si estás conectando tu **Container Groups** a una cuenta de Azure Storage, debes agregar un **private endpoint** a este recurso.  
+- No se admiten direcciones IPv6.  
+- Las instancias de contenedor no heredan la configuración de DNS de la red virtual asociada. Debes establecer explícitamente la configuración de DNS para las instancias de contenedor.
+
+---
+
+### Recursos de red requeridos
+
+Hay dos recursos de Azure Virtual Network necesarios para desplegar **Container Groups** en una red virtual: la red virtual en sí y una subred delegada dentro de la red virtual 
+
+- **Red virtual**  
+  Una red virtual define el espacio de direcciones en el que creas una o más subredes.
+
+- **Subred (delegada)**  
+  Las subredes segmentan la red virtual en espacios de direcciones separados que pueden usar los recursos de Azure que colocas en ellas.  
+  La subred que uses para grupos de contenedores solo puede contener grupos de contenedores. Una vez delegada, la subred solo se puede utilizar para grupos de contenedores.
+
+## Desplegar ACI en una red virtual de Azure
+
+### Requisitos previos
+
+### Definir variables de entorno
+
+La vía de despliegue automatizada utiliza las siguientes variables de entorno y nombres de recursos a lo largo de esta guía. Si realizas el proceso manualmente, puedes usar tus propias variables y nombres según prefieras.
+
+### Crear un grupo de recursos
+
+Necesitas un grupo de recursos para administrar todos los recursos utilizados en los siguientes ejemplos. Para crear un grupo de recursos, usa `az group create`:
+
+```bash
+export RANDOM_ID="$(openssl rand -hex 3)"
+export RESOURCE_GROUP_NAME="myACIResourceGroup$RANDOM_ID"
+export LOCATION='eastus'
+
+az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
+```
+> Nota: Una operación exitosa debería producir una salida similar al siguiente JSON:
+```json
+{
+  "id": "/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx/resourceGroups/myACIResourceGroup123abc",
+  "location": "eastus",
+  "managedBy": null,
+  "name": "myACIResourceGroup123",
+  "properties": {
+    "provisioningState": "Succeeded"
+  },
+  "tags": null,
+  "type": "Microsoft.Resources/resourceGroups"
+}
+```
+
+## Desplegar en una nueva red virtual
+
+> Nota: Usa minimo un rango de subred /28 para disponer de al menos 1 o más direcciones IP de buffer por cada grupo de contenedores.
+
+Para desplegar en una nueva red virtual y permitir que Azure cree automáticamente los recursos de red, especifica lo siguiente cuando ejecutes az container create:
+- Nombre de la red virtual
+- Prefijo de dirección de la red virtual en formato CIDR
+- Nombre de la subred
+- Prefijo de dirección de la subred en formato CIDR
+
+Los prefijos de dirección de la red virtual y de la subred especifican los espacios de direcciones para la red virtual y la subred, respectivamente. Se representan en notación CIDR (Classless Inter-Domain Routing), por ejemplo 10.0.0.0/28.
+
+Una vez que despliegas tu primer **Container Groups** con este método, puedes desplegar otros **Container Groups** en la misma subred especificando los nombres de la red virtual y la subred. Debido a que Azure delega la subred a Azure Container Instances, solo puedes desplegar grupos de contenedores en esa subred.
+
+> Ejemplo: 
+El siguiente comando az container create especifica la configuración para una nueva red virtual y subred. Proporciona el nombre de un grupo de recursos que se haya creado en una región donde los despliegues de grupos de contenedores en una red virtual estén disponibles. Este comando despliega el contenedor público de Microsoft aci-helloworld, que ejecuta un pequeño servidor web Node.js sirviendo una página estática. En la siguiente sección, desplegarás un segundo grupo de contenedores en la misma subred y probarás la comunicación entre las dos instancias de contenedor.
+
+```bash
+export APP_CONTAINER_NAME="appcontainer"
+export VNET_NAME="aci-vnet"
+export SUBNET_NAME="aci-subnet"
+
+az container create \
+  --name $APP_CONTAINER_NAME \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --image mcr.microsoft.com/azuredocs/aci-helloworld \
+  --vnet $VNET_NAME \
+  --vnet-address-prefix 10.0.0.0/16 \
+  --subnet $SUBNET_NAME \
+  --subnet-address-prefix 10.0.0.0/24 \
+  --os-type Linux \
+  --cpu 1 \
+  --memory 1.5
+```
+
+Para ver el estado del despliegue, utiliza el siguiente comando:
+
+```bash
+    az container show --resource-group $RESOURCE_GROUP_NAME --name $APP_CONTAINER_NAME --output table
+```
+
+Para ver los registros del contenedor, ejecuta un comando similar especificando el contenedor aci-tutorial-sidecar:
+
+```bash
+    az container logs --resource-group $RESOURCE_GROUP_NAME --name $APP_CONTAINER_NAME
 ```
 
