@@ -221,7 +221,7 @@ Nota: Si quisieramos usar un registry privado tendriamos que agregar:
 
 1.	Crea un grupo de recursos con el comando az group create:
     ```bash
-    az group create --name myResourceGroup --location eastus
+    az group create --name myResourceGroup --location brazilsouth
     ```
 
 2.	Despliega la plantilla utilizando el comando az deployment group create:
@@ -308,7 +308,7 @@ code deploy-aci.yaml
 
 ```yaml
 apiVersion: 2023-05-01
-location: eastus           # Ajusta la ubicación según corresponda
+location: brazilsouth           # Ajusta la ubicación según corresponda
 name: myContainerGroup
 zones:
   - "1"                    # Zona de disponibilidad
@@ -350,7 +350,7 @@ imageRegistryCredentials:
     Utiliza el siguiente comando para crear un grupo de recursos:
 
     ```bash
-    az group create --name myResourceGroup --location eastus
+    az group create --name myResourceGroup --location brazilsouth
     ```
 
 2.	Desplegar el grupo de contenedores:
@@ -507,7 +507,7 @@ code ngroups-deployment.json
   "parameters": {
     "location": {
       "type": "string",
-      "defaultValue": "eastus"
+      "defaultValue": "brazilsouth"
     },
     "cgProfileName": {
       "type": "string",
@@ -619,7 +619,7 @@ code ngroups-deployment.json
 1.	Crear o seleccionar un grupo de recursos (si no existe):
 
     ```bash
-    az group create --name myResourceGroup --location eastus
+    az group create --name myResourceGroup --location brazilsouth
     ```
 
 2.	Desplegar la plantilla que contiene containerGroupProfiles y NGroups:
@@ -628,7 +628,7 @@ code ngroups-deployment.json
     az deployment group create \
     --resource-group myResourceGroup \
     --template-file ngroups-deployment.json \
-    --parameters location=eastus cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=3
+    --parameters location=brazilsouth cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=3
     ```
 
 3.	Verificar que se haya creado el recurso:
@@ -649,7 +649,7 @@ Para cambiar el número de instancias en tu NGroups, puedes actualizar el desire
     az deployment group create \
     --resource-group myResourceGroup \
     --template-file ngroups-deployment.json \
-    --parameters location=eastus cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=5
+    --parameters location=brazilsouth cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=5
 ```
 
 ## Virtual network scenarios
@@ -715,7 +715,7 @@ Necesitas un grupo de recursos para administrar todos los recursos utilizados en
 ```bash
 export RANDOM_ID="$(openssl rand -hex 3)"
 export RESOURCE_GROUP_NAME="myACIResourceGroup$RANDOM_ID"
-export LOCATION='eastus'
+export LOCATION='brazilsouth'
 
 az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 ```
@@ -723,7 +723,7 @@ az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 ```json
 {
   "id": "/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx/resourceGroups/myACIResourceGroup123abc",
-  "location": "eastus",
+  "location": "brazilsouth",
   "managedBy": null,
   "name": "myACIResourceGroup123",
   "properties": {
@@ -807,7 +807,7 @@ El siguiente YAML crea un **Container Groups** en tu red virtual existente.
 
 ```yaml
 apiVersion: '2021-07-01'
-location: eastus
+location: brazilsouth
 name: appcontaineryaml
 properties:
   containers:
@@ -840,7 +840,7 @@ type: Microsoft.ContainerInstance/containerGroups
 
 # Variables de entorno
 export RESOURCE_GROUP_NAME='myAciYaml'
-export LOCATION='eastus'
+export LOCATION='brazilsouth'
 export VNET_NAME='myAciYamlVnet'
 export SUBNET_NAME='myAciYamlVnetSubnet'
 export YAML_APP_CONTAINER_NAME="appcontaineryaml"
