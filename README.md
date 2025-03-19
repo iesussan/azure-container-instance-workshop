@@ -314,6 +314,10 @@ code deploy-aci.yaml
 apiVersion: 2023-05-01
 location: brazilsouth           # Ajusta la ubicación según corresponda
 name: myContainerGroup
+tags:
+  environment: lab
+  app: "Laboratorio Operaciones"
+  owner: "TEC-IT OPERATIONS & INFRASTRUCTURE"
 zones:
   - "1"                    # Zona de disponibilidad
 properties:
