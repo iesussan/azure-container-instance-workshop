@@ -896,7 +896,8 @@ az network vnet create \
   --name $VNET_NAME \
   --address-prefixes 10.0.0.0/8 \
   --subnet-name $SUBNET_NAME \
-  --subnet-prefix 10.0.0.0/16
+  --subnet-prefix 10.0.0.0/16 \
+  --tags environment=lab app="Laboratorio Operaciones" owner="TEC-IT OPERATIONS & INFRASTRUCTURE"
 
 # 3. Delegar la Subnet para Azure Container Instances
 az network vnet subnet update \
@@ -916,7 +917,9 @@ export SUBNET_ID=$(az network vnet subnet show \
 az monitor log-analytics workspace create \
   --resource-group $RESOURCE_GROUP_NAME \
   --workspace-name $LOG_ANALYTICS_WORKSPACE_NAME \
-  --location $LOCATION
+  --location $LOCATION \
+  --tags environment=lab app="Laboratorio Operaciones" owner="TEC-IT OPERATIONS & INFRASTRUCTURE"
+
 
 # 6. Obtener el Workspace ID y la clave compartida
 export LOG_ANALYTICS_WORKSPACE_ID=$(az monitor log-analytics workspace show \
