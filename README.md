@@ -14,8 +14,6 @@
         - [Desplegar el grupo de contenedores](#desplegar-el-grupo-de-contenedores)
         - [Estado del despliegue](#estado-del-despliegue)
         - [Ver los registros del contenedor (YAML)](#ver-los-registros-del-contenedor-yaml)
-  - [NGroups (Preview)](#ngroups-preview)
-    - [Arquitectura de Alto Nivel y Conceptos Clave](#arquitectura-de-alto-nivel-y-conceptos-clave)
 
 - [Virtual network scenarios](#virtual-network-scenarios)
     - [Escenarios](#escenarios)
@@ -27,6 +25,7 @@
         - [Desplegar en una nueva red virtual](#desplegar-en-una-nueva-red-virtual)
         - [Desplegar en una red virtual existente](#desplegar-en-una-red-virtual-existente)
 
+- [Monitor Azure Container Instance](#monitor-azure-container-instance)
 ## Conceptos Base
 ### ¿Que es Azure Container Instance?
 
@@ -846,13 +845,13 @@ Consultas en Kusto (KQL)
 Puedes analizar los datos de monitorización en el almacén de Log Analytics utilizando el lenguaje de consulta Kusto (KQL). Por ejemplo, la siguiente consulta muestra todas las entradas de registro cuyo campo “Message” contiene la palabra “warn”:
 
 ```kusto
-ContainerInstanceLog_CL
+ContainerEvent_CL
 | where Message contains "warn"
 ```
 
 Para un grupo de contenedores específico (por ejemplo, “mycontainergroup001”) y entradas generadas en la última hora:
 ```kusto
-ContainerInstanceLog_CL
+ContainerEvent_CL
 | where ContainerGroup_s == "mycontainergroup001"
 | where TimeGenerated > ago(1h)
 ```
