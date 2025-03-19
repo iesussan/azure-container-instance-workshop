@@ -416,241 +416,6 @@ Borrado de Resource Group
 az group delete -n myResourceGroup --yes
 ```
 
-## NGroups (Preview)
-
-## Arquitectura de Alto Nivel y Conceptos Clave
-
-NGroups provee funcionalidades avanzadas para manejar multiples capacidades sobre los Container Groups.
-De los elementos principales se incluyen:
-- Es capaz de manater multiples instancias
-- Permite Rolling Updates.
-- Permite la implementacion de alta disponibilidad gracias al soporte de Availability Zones (AZs)
-- Soporta Managed Identity
-- Soporta Confidential container
-- Soporta la implementacion de Balanceadores.
-- Soporta Zone rebalancing (Zone Any)
-
-## Grafico de Aquitectura de alto nivel
-
-![Container Group Example](./images/ngroups-overview.png)
-
-La imagen ilustra la diferencia entre:
-1.	**Crear contenedores individualmente en ACI:**
-    - En la parte izquierda se ve cómo el usuario realiza llamadas directas a la API de Azure Container Instances (ACI) para crear varios grupos de contenedores (CG1, CG2, CG3).
-    - Cada contenedor o grupo de contenedores se gestiona de manera independiente, y el usuario debe realizar varias llamadas (PUT CG1, PUT CG2, PUT CG3) para crearlos o actualizarlos.
-2.	Usar NGroups para gestionar varios contenedores de forma centralizada:
-    - En la parte derecha se ve un único recurso llamado “NGroups: Foo”, con un Desired count: 3 y una referencia a un “CGProfile” (Container Group Profile).
-    - NGroups actúa como una capa adicional sobre ACI. El usuario hace una sola llamada (PUT NGroups: Foo) indicando cuántos grupos de contenedores (N) quiere y con qué propiedades (definidas en el CGProfile).
-    - NGroups se encarga de llamar internamente a las APIs de ACI (PUT CGX) para crear y mantener esos contenedores.
-
-3. En la sección inferior derecha se muestra cómo NGroups administra automáticamente la disponibilidad y la escala de los grupos de contenedores:
-    - El recurso NGroups “Foo” tiene 3 instancias en ejecución: Foo_1, Foo_2 y Foo_3.
-    - Cuando una de las instancias falla (Failed Instance Foo_3), NGroups detecta la caída y crea una nueva instancia (Foo_4) para mantener el número deseado de contenedores (Desired count = 3).
-
-En resumen:
-    - Sin NGroups, el usuario gestiona cada Container Group de manera individual llamando a la API de ACI tantas veces como contenedores requiera.
-    - Con NGroups, se especifica un perfil (CGProfile) y un número deseado de instancias (N). NGroups se encarga de crear y mantener esos N contenedores, lo que facilita tareas como la escala, las actualizaciones y la resiliencia frente a fallos.
-
-NGroups se basa en dos componentes principales:
-
-1. **Container Group Profile (CGProfile):**  
-   Actúa como una plantilla que define las propiedades comunes de los Container Groups, como la imagen del contenedor, recursos (CPU, memoria), restart policy, configuración de IP y otros parámetros. Esto evita la duplicación de configuraciones y reduce la sobrecarga de administración cuando se gestionan múltiples CGs.
-
-2. **NGroups Resource:**  
-   Una vez creado el CGProfile, se crea un recurso NGroups que referencia dicho perfil. Al definir el número deseado de instancias (desiredCount) y otras propiedades (como zonas, identidades o balanceadores), NGroups invoca las API de ACI para crear o actualizar los Container Groups conforme a la plantilla definida en el CGProfile.
-
-### Beneficios de Usar NGroups
-
-- **Consistencia y eficiencia:** Al centralizar la configuración en un CGProfile, se garantiza que todos los CGs tengan propiedades consistentes.
-- **Escalabilidad simplificada:** Se pueden crear y administrar 'n' Container Groups con una sola operación de API.
-- **Flexibilidad en actualizaciones:** Permite actualizaciones manuales o progresivas (rolling), minimizando el impacto en la producción.
-- **Distribución en múltiples zonas:** Asegura que la aplicación siga operativa incluso si una zona falla, ya que los CGs se distribuyen en varias Availability Zones.
-
-
-### Ejemplo de ARM Template para NGroups
-
-A continuación se muestra un ejemplo de ARM Template que crea un CGProfile y un recurso NGroups que distribuye los Container Groups en zonas múltiples. Este template ilustra cómo se configura el desiredCount, se referencia el CGProfile y se establecen las zonas de disponibilidad.
-
-1.	Registrar la característica de NGroupsPreview en tu suscripción:
-
-```bash
-az feature register --name NGroupsPreview --namespace Microsoft.ContainerInstance
-```
-2.	Revisar el estado de la característica:
-```bash
-az feature show --name NGroupsPreview --namespace Microsoft.ContainerInstance
-```
-    nota: Espera hasta que el estado sea Registered.
-
-3.	Registrar el proveedor de recursos de ACI nuevamente para que tome efecto la nueva característica:
-```
-az provider register --namespace Microsoft.ContainerInstance
-```
-
-### Plantilla ARM para NGroups
-
-A diferencia de un container group tradicional, al usar NGroups primero creamos un Container Group Profile y luego un NGroups que hace referencia a ese perfil. Este ejemplo ARM template contiene ambos recursos:
-
-1.	Container Group Profile (tipo Microsoft.ContainerInstance/containerGroupProfiles)
-2.	NGroups (tipo Microsoft.ContainerInstance/NGroups)
-
-Crea un archivo llamado ngroups-deployment.json con el siguiente contenido (ajusta parámetros según necesites):
-
-```bash
-touch ngroups-deployment.json
-code ngroups-deployment.json
-```
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "location": {
-      "type": "string",
-      "defaultValue": "brazilsouth"
-    },
-    "cgProfileName": {
-      "type": "string",
-      "defaultValue": "myCGProfile"
-    },
-    "nGroupsName": {
-      "type": "string",
-      "defaultValue": "myNGroup"
-    },
-    "desiredCount": {
-      "type": "int",
-      "defaultValue": 3
-    },
-    "zonesArray": {
-      "type": "array",
-      "defaultValue": [
-        "1",
-        "2",
-        "3"
-      ],
-      "metadata": {
-        "description": "Zonas de disponibilidad para distribuir los contenedores."
-      }
-    }
-  },
-  "variables": {
-    "resourcePrefix": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/')]"
-  },
-  "resources": [
-    {
-      "apiVersion": "2024-11-01-preview",
-      "type": "Microsoft.ContainerInstance/containerGroupProfiles",
-      "name": "[parameters('cgProfileName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "sku": "Standard",
-        "containers": [
-          {
-            "name": "aci-tutorial-app",
-            "properties": {
-              "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
-              "ports": [
-                {
-                  "protocol": "TCP",
-                  "port": 80
-                }
-              ],
-              "resources": {
-                "requests": {
-                  "memoryInGB": 1.5,
-                  "cpu": 1
-                }
-              }
-            }
-          }
-        ],
-        "restartPolicy": "OnFailure",
-        "ipAddress": {
-          "type": "Public",
-          "ports": [
-            {
-              "protocol": "TCP",
-              "port": 80
-            }
-          ]
-        },
-        "osType": "Linux"
-      }
-    },
-    {
-      "apiVersion": "2024-11-01-preview",
-      "type": "Microsoft.ContainerInstance/NGroups",
-      "name": "[parameters('nGroupsName')]",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
-      ],
-      "properties": {
-        "elasticProfile": {
-          "desiredCount": "[parameters('desiredCount')]",
-          "maintainDesiredCount": true
-        },
-        "updateProfile": { 
-          "updateMode": "Rolling",
-          "rollingUpdateProfile": { 
-            "inPlaceUpdate": true 
-          } 
-        },
-        "containerGroupProfiles": [
-          {
-            "resource": {
-              "id": "[resourceId('Microsoft.ContainerInstance/containerGroupProfiles', parameters('cgProfileName'))]"
-            }
-          }
-        ]
-      },
-      "zones": "[parameters('zonesArray')]"
-    }
-  ],
-  "outputs": {
-    "nGroupsResourceId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.ContainerInstance/NGroups', parameters('nGroupsName'))]"
-    }
-  }
-}
-```
-## Desplegar plantilla ARM para Ngroups
-1.	Crear o seleccionar un grupo de recursos (si no existe):
-
-    ```bash
-    az group create --name myResourceGroup --location brazilsouth --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
-    ```
-
-2.	Desplegar la plantilla que contiene containerGroupProfiles y NGroups:
-
-    ```bash
-    az deployment group create \
-    --resource-group myResourceGroup \
-    --template-file ngroups-deployment.json \
-    --parameters location=brazilsouth cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=3
-    ```
-
-3.	Verificar que se haya creado el recurso:
-
-    ```bash
-    az resource show \
-    --resource-group myResourceGroup \
-    --name myNGroup \
-    --resource-type Microsoft.ContainerInstance/NGroups \
-    --query properties \
-    --output json
-    ```
-4. Escalar o Actualizar NGroups
-
-Para cambiar el número de instancias en tu NGroups, puedes actualizar el desiredCount:
-
-```bash
-    az deployment group create \
-    --resource-group myResourceGroup \
-    --template-file ngroups-deployment.json \
-    --parameters location=brazilsouth cgProfileName=myCGProfile nGroupsName=myNGroup desiredCount=5
-```
 
 ## Virtual network scenarios
 
@@ -915,4 +680,280 @@ Para ver los registros del contenedor, ejecuta un comando similar especificando 
 
 ```bash
     az container logs --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME
+```
+
+## Monitor Azure Container Instance
+
+
+> **Nota**  
+> Si ya estás familiarizado con este servicio y/o Azure Monitor y solo deseas saber cómo analizar los datos de monitorización, consulta la sección **Analizar** al final de este artículo.
+
+Cuando tienes aplicaciones críticas y procesos de negocio que dependen de los recursos de Azure, necesitas monitorizar y configurar alertas para tu sistema. El servicio Azure Monitor recopila y agrega y registra de cada una de las métricas de tus servicios de azure. Azure Monitor  proporciona una vista de la disponibilidad, rendimiento y resiliencia, y es capaz de notificar cuando surgen problemas. Puedes usar el portal de Azure, PowerShell, Azure CLI, la API REST o SDK's para configurar y ver los datos de monitorización.
+
+Para obtener más información sobre Azure Monitor, consulta [Descripción general de Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/overview).  
+Para más información sobre cómo monitorizar recursos de Azure en general, consulta [Monitor Azure resources with Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/).
+
+---
+
+## Tipos de recursos
+
+Azure utiliza el concepto de tipos de recursos e IDs para identificar todo en una suscripción. Los tipos de recursos forman parte del ID de cada recurso en Azure. Por ejemplo, uno de los tipos de recurso para una máquina virtual es `Microsoft.Compute/virtualMachines`. Para obtener una lista de servicios y sus tipos de recurso asociados, consulta [Resource providers](https://learn.microsoft.com/azure/azure-resource-manager/management/azure-services-resource-providers).
+
+Azure Monitor organiza de manera similar los datos de monitorización en métricas y registros basados en tipos de recurso, también llamados *namespaces*. Diferentes métricas y registros están disponibles para distintos tipos de recursos. Tu servicio puede estar asociado a más de un tipo de recurso.
+
+Para más información sobre los tipos de recurso para Azure Container Instances, consulta [Container Instances monitoring data reference](https://learn.microsoft.com/azure/container-instances/container-instances-monitoring).
+
+---
+
+## Almacenamiento de datos
+
+Para Azure Monitor:
+
+- **Métricas:**  
+  Los datos de métricas se almacenan en la base de datos de métricas de Azure Monitor.
+  
+- **Registros:**  
+  Los datos de registros se almacenan en el almacén de registros de Azure Monitor. *Log Analytics* es una herramienta en el portal de Azure que permite consultar este almacén.
+  
+- **Registro de actividad de Azure:**  
+  El registro de actividad es un almacén separado con su propia interfaz en el portal de Azure.
+
+Opcionalmente, puedes enrutar los datos de métricas y de registro de actividad al almacén de registros de Azure Monitor. Luego, puedes usar *Log Analytics* para consultar los datos y correlacionarlos con otros registros.
+
+Muchos servicios pueden usar configuraciones de diagnóstico para enviar datos de métricas y registros a otros destinos externos a Azure Monitor, como Azure Storage, Event Hubs, sistemas de socios hospedados y sistemas de socios no-Azure.
+
+Para obtener información detallada sobre cómo Azure Monitor almacena los datos, consulta [Azure Monitor data platform](https://learn.microsoft.com/azure/azure-monitor/essentials/data-platform).
+
+---
+
+## Métricas de plataforma de Azure Monitor
+
+Azure Monitor proporciona métricas de plataforma para la mayoría de los servicios. Estas métricas se caracterizan por:
+
+- Estar definidas individualmente para cada *namespace*.  
+- Estar almacenadas en la base de datos de métricas de series temporales de Azure Monitor.  
+- Ser ligeras y capaces de soportar alertas casi en tiempo real.  
+- Ser utilizadas para rastrear el rendimiento de un recurso a lo largo del tiempo.
+
+**Recopilación:**  
+Azure Monitor recopila automáticamente las métricas de plataforma. No se requiere configuración adicional.
+
+**Enrutamiento:**  
+También puedes enrutar algunas métricas de plataforma a Azure Monitor Logs / Log Analytics para consultarlas junto con otros registros. Revisa la configuración de exportación para cada métrica y usa una configuración de diagnóstico para enrutar la métrica a Azure Monitor Logs / Log Analytics.
+
+Para más información, consulta [Metrics diagnostic setting](https://learn.microsoft.com/azure/azure-monitor/essentials/diagnostic-settings).
+
+Para configurar configuraciones de diagnóstico para un servicio, consulta [Create diagnostic settings in Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/essentials/diagnostic-settings).
+
+Para una lista de todas las métricas que es posible recopilar para todos los recursos en Azure Monitor, consulta [Supported metrics in Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/platform/metrics-supported).
+
+Para una lista de métricas disponibles para Container Instances, consulta [Container Instances monitoring data reference](https://learn.microsoft.com/azure/container-instances/container-instances-monitoring).
+
+Por defecto, las métricas se agregan como promedios. En un grupo de contenedores con múltiples contenedores, puedes filtrar por la dimensión `containerName` para obtener métricas de un contenedor específico dentro del grupo.
+
+---
+
+## Obtener métricas
+
+Puedes recopilar métricas de Azure Monitor para instancias de contenedores usando el portal de Azure o Azure CLI.
+
+> **Importante**  
+> Las métricas de Azure Monitor para Azure Container Instances están en vista previa. Actualmente, solo están disponibles para contenedores Linux. Se ponen a disposición bajo condiciones adicionales de uso. Algunos aspectos de esta función pueden cambiar antes de su disponibilidad general (GA).
+
+### Usar el portal de Azure
+
+Cuando se crea un **Container Name**, los datos de Azure Monitor están disponibles en el portal de Azure. Para ver las métricas de un **Container Name**, ve a la página de **Overview** del grupo. Aquí encontrarás gráficos predefinidos para cada una de las métricas disponibles.
+
+En un grupo con múltiples contenedores, usa una dimensión para mostrar métricas por contenedor. Por ejemplo, selecciona un gráfico de métricas (como CPU), haz clic en **Apply splitting** y selecciona **Container Name**.
+
+![metrics](./images/metrics.png)
+
+
+### Usar Azure CLI
+
+Primero, obtén el ID del grupo de contenedores usando el siguiente comando (reemplaza `<resource-group>` y `<container-group>` según corresponda):
+
+```bash
+CONTAINER_GROUP=$(az container show --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME --query id --output tsv)
+```
+
+Luego, para obtener métricas de uso de CPU:
+```bash
+az monitor metrics list --resource $CONTAINER_GROUP --metric CPUUsage --output table
+```
+Para obtener métricas de uso de memoria:
+```bash
+az monitor metrics list --resource $CONTAINER_GROUP --metric MemoryUsage --output table
+```
+
+En un grupo de contenedores con múltiples contenedores, puedes agregar la dimensión containerName para ver las métricas por contenedor:
+```bash
+az monitor metrics list --resource $CONTAINER_GROUP --metric MemoryUsage --metric CPUUsage --dimension containerName --output table
+```
+
+## Registros de recursos de Azure Monitor
+
+Los registros de recursos proporcionan información sobre las operaciones realizadas por un recurso de Azure. Los registros se generan automáticamente, pero debes enrutar estos registros a Azure Monitor Logs para almacenarlos o consultarlos. Los registros se organizan en categorías; un mismo namespace puede tener múltiples categorías de registros.
+
+**Recopilación:**
+Los registros no se recopilan ni almacenan hasta que creas una configuración de diagnóstico y los enrutas a uno o más destinos. Al crear una configuración de diagnóstico, especificas las categorías de registros a recopilar.
+
+**Enrutamiento:**
+La opción recomendada es enrutar los registros a Azure Monitor Logs aks Log Analytics para poder consultarlos junto con otros datos de registro. También puedes enviarlos a Azure Storage, Azure Event Hubs y a ciertos socios de monitorización.
+
+Para obtener información detallada sobre la recopilación, el almacenamiento y el enrutamiento de registros, consulta Diagnostic settings in Azure Monitor.
+
+Para una lista de todas las categorías de registros disponibles, consulta Supported resource logs in Azure Monitor.
+
+Los registros de recursos en Azure Monitor tienen un esquema común, seguido de campos específicos del servicio. Para obtener más información sobre cómo obtener datos de registro para Container Instances, consulta Retrieve container logs and events in Azure Container Instances.
+
+---
+## Azure activity log
+
+El registro de actividad contiene eventos a nivel de suscripción que registran las operaciones realizadas en cada recurso de Azure, como la creación de un recurso o el inicio de una máquina virtual.
+**- Recopilación:**
+Los eventos del registro de actividad se generan automáticamente y se almacenan en un almacén separado para su visualización en el portal de Azure.
+- Enrutamiento:
+Puedes enviar los datos del registro de actividad a Azure Monitor Logs para analizarlos junto con otros datos de registro. También es posible enviarlos a Azure Storage, Event Hubs y a ciertos socios de monitorización.
+
+Para más información sobre cómo enrutar el registro de actividad, consulta Overview of the Azure activity log.
+
+---
+## Analizar los datos de monitorización
+
+Existen múltiples herramientas para analizar los datos de monitorización en Azure Monitor:
+
+Herramientas de Azure Monitor
+- **Metrics Explorer:**
+Herramienta en el portal de Azure que permite visualizar y analizar métricas de los recursos de Azure. Consulta Analyze metrics with Azure Monitor metrics explorer.
+- **Log Analytics workspaces:**
+Permite consultar y analizar los datos de registro usando el lenguaje de consulta Kusto (KQL). Consulta Get started with log queries in Azure Monitor.
+- **Registro de actividad:**
+Tiene una interfaz en el portal de Azure para búsquedas básicas. Para análisis más detallados, envía los datos al almacén de Azure Monitor Logs y utiliza Log Analytics.
+
+Otras herramientas avanzadas incluyen:
+ - **Dashboards:** Combina diferentes tipos de datos en un solo panel en el portal de Azure.
+ - **Workbooks:** Reportes personalizables que pueden incluir texto, métricas y consultas de registro.
+ - **Grafana:** Plataforma abierta para crear dashboards operativos con datos de múltiples fuentes.
+ - **Power BI:** Servicio de análisis empresarial que permite visualizaciones interactivas; se puede configurar para importar datos de Azure Monitor automáticamente.
+
+## Analizar registros de Container Instances
+
+Puedes usar Log Analytics para analizar y consultar los registros de las instancias de contenedores. También puedes habilitar configuraciones de diagnóstico (en vista previa) en el portal de Azure. Ten en cuenta que Log Analytics y las configuraciones de diagnóstico usan esquemas de tabla ligeramente diferentes.
+
+Consultas en Kusto (KQL)
+
+Puedes analizar los datos de monitorización en el almacén de Log Analytics utilizando el lenguaje de consulta Kusto (KQL). Por ejemplo, la siguiente consulta muestra todas las entradas de registro cuyo campo “Message” contiene la palabra “warn”:
+
+```kusto
+ContainerInstanceLog_CL
+| where Message contains "warn"
+```
+
+Para un grupo de contenedores específico (por ejemplo, “mycontainergroup001”) y entradas generadas en la última hora:
+```kusto
+ContainerInstanceLog_CL
+| where ContainerGroup_s == "mycontainergroup001"
+| where TimeGenerated > ago(1h)
+```
+
+
+## Demo de monitoreo
+
+```bash
+#!/bin/bash
+
+# Variables de entorno
+export RESOURCE_GROUP_NAME='myAciYaml'
+export LOCATION='brazilsouth'
+export VNET_NAME='myAciYamlVnet'
+export SUBNET_NAME='myAciYamlVnetSubnet'
+export YAML_APP_CONTAINER_NAME="appcontaineryaml"
+export LOG_ANALYTICS_WORKSPACE_NAME="myLogAnalyticsWS"
+
+# 1. Crear el grupo de recursos
+az group create --name $RESOURCE_GROUP_NAME --location $LOCATION --tags environment=lab app="Workshop ACI" owner-ops="tec-it operations & infrastructure" owner-dev="tec-it integration & application dev"
+
+# 2. Crear la VNet y la Subnet
+az network vnet create \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --name $VNET_NAME \
+  --address-prefixes 10.0.0.0/8 \
+  --subnet-name $SUBNET_NAME \
+  --subnet-prefix 10.0.0.0/16
+
+# 3. Delegar la Subnet para Azure Container Instances
+az network vnet subnet update \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --vnet-name $VNET_NAME \
+  --name $SUBNET_NAME \
+  --delegations "Microsoft.ContainerInstance/containerGroups"
+
+# 4. Obtener el ID de la Subnet
+export SUBNET_ID=$(az network vnet subnet show \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --vnet-name $VNET_NAME \
+  --name $SUBNET_NAME \
+  --query id --output tsv)
+
+# 5. Crear un Log Analytics Workspace
+az monitor log-analytics workspace create \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --workspace-name $LOG_ANALYTICS_WORKSPACE_NAME \
+  --location $LOCATION
+
+# 6. Obtener el Workspace ID y la clave compartida
+export LOG_ANALYTICS_WORKSPACE_ID=$(az monitor log-analytics workspace show \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --workspace-name $LOG_ANALYTICS_WORKSPACE_NAME \
+  --query customerId --output tsv)
+
+export LOG_ANALYTICS_WORKSPACE_KEY=$(az monitor log-analytics workspace get-shared-keys \
+  --resource-group $RESOURCE_GROUP_NAME \
+  --workspace-name $LOG_ANALYTICS_WORKSPACE_NAME \
+  --query primarySharedKey --output tsv)
+
+# 7. Generar el archivo YAML en memoria con sustitución de variables, incluyendo la configuración de diagnostics
+cat <<EOF > container.yaml
+apiVersion: '2023-05-01'
+location: ${LOCATION}
+name: ${YAML_APP_CONTAINER_NAME}
+properties:
+  containers:
+  - name: ${YAML_APP_CONTAINER_NAME}
+    properties:
+      image: mcr.microsoft.com/azuredocs/aci-helloworld
+      ports:
+      - port: 80
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  ipAddress:
+    type: Private
+    ports:
+    - protocol: tcp
+      port: '80'
+  osType: Linux
+  restartPolicy: Always
+  subnetIds:
+    - id: ${SUBNET_ID}
+      name: default
+  diagnostics:
+    logAnalytics:
+      workspaceId: ${LOG_ANALYTICS_WORKSPACE_ID}
+      workspaceKey: ${LOG_ANALYTICS_WORKSPACE_KEY}
+tags: null
+type: Microsoft.ContainerInstance/containerGroups
+EOF
+
+# 8. Crear el Container Instance usando el archivo YAML generado
+az container create --resource-group $RESOURCE_GROUP_NAME --file container.yaml
+
+# 9. Verificar el estado del despliegue
+az container show --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME --output table
+
+# 10. Ver los registros del contenedor
+az container logs --resource-group $RESOURCE_GROUP_NAME --name $YAML_APP_CONTAINER_NAME
 ```
