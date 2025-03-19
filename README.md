@@ -631,7 +631,8 @@ az network vnet create \
   --name $VNET_NAME \
   --address-prefixes 10.0.0.0/8 \
   --subnet-name $SUBNET_NAME \
-  --subnet-prefix 10.0.0.0/16
+  --subnet-prefix 10.0.0.0/16 \
+  --tags environment=lab app="Laboratorio Operaciones" owner="TEC-IT OPERATIONS & INFRASTRUCTURE"
 
 # 3. Delegar la Subnet para Azure Container Instances
 az network vnet subnet update \
