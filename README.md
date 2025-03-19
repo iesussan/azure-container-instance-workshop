@@ -583,6 +583,10 @@ El siguiente YAML crea un **Container Groups** en tu red virtual existente.
 apiVersion: '2021-07-01'
 location: brazilsouth
 name: appcontaineryaml
+tags:
+  environment: lab
+  app: "Laboratorio Operaciones"
+  owner: "TEC-IT OPERATIONS & INFRASTRUCTURE"
 properties:
   containers:
   - name: appcontaineryaml
