@@ -539,8 +539,7 @@ az container create \
   --subnet-address-prefix 10.0.0.0/24 \
   --os-type Linux \
   --cpu 1 \
-  --memory 1.5 \
-  --tags environment=lab app="Laboratorio Operaciones" owner="TEC-IT OPERATIONS & INFRASTRUCTURE"
+  --memory 1.5
 ```
 
 Para ver el estado del despliegue, utiliza el siguiente comando:
@@ -653,6 +652,10 @@ cat <<EOF > container.yaml
 apiVersion: '2023-05-01'
 location: ${LOCATION}
 name: ${YAML_APP_CONTAINER_NAME}
+tags:
+  environment: lab
+  app: "Laboratorio Operaciones"
+  owner: "TEC-IT OPERATIONS & INFRASTRUCTURE"
 properties:
   containers:
   - name: ${YAML_APP_CONTAINER_NAME}
@@ -931,6 +934,10 @@ cat <<EOF > container.yaml
 apiVersion: '2023-05-01'
 location: ${LOCATION}
 name: ${YAML_APP_CONTAINER_NAME}
+tags:
+  environment: lab
+  app: "Laboratorio Operaciones"
+  owner: "TEC-IT OPERATIONS & INFRASTRUCTURE"
 properties:
   containers:
   - name: ${YAML_APP_CONTAINER_NAME}
