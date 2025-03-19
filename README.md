@@ -151,6 +151,11 @@ code azuredeploy.json
       "type": "Microsoft.ContainerInstance/containerGroups",
       "apiVersion": "2023-05-01",
       "location": "[resourceGroup().location]",
+      "tags": {
+        "environment": "lab",
+        "app": "Laboratorio Operaciones",
+        "owner": "TEC-IT OPERATIONS & INFRASTRUCTURE"
+      },
       "zones": [
         "[parameters('availabilityZone')]"
       ],
